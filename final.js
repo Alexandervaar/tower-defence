@@ -344,6 +344,7 @@ function draw() {
     // Once a wave is finished, start counting down to the next one
     if (isWaveFinished() && !waitingForWave) {
         waveNumber++;
+        monsterhealth1 += 50;
         waitingForWave = true;
         waveCountdownStart = framecount;
     }
@@ -369,6 +370,7 @@ function mousePressed() {
         monsters = [];                  // Reset the monsters array
         monstersKilled = 0;            // Reset the number of monsters killed
         waveNumber = 1;               // Reset wave number
+        monsterhealth1 = 100;          // Reset monster health scaling
         towers = [];                 // Reset placed towers
         selectedTowerIndex = -1;    // Reset selected tower
         waveActive = false;        // Reset wave state
