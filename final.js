@@ -5,14 +5,14 @@ let numGridElems = 10;  // Amount of grid elements
 let framecount = 0;    // Frame count
 
 // Spawn time period
-let waveDelay = 600;          // Delay before a wave starts, in frames (10s at 60 FPS)
+let waveDelay = 180;          // Delay before a wave starts, in frames (10s at 60 FPS)
 let waitingForWave = true;   // Whether we're currently counting down to the next wave
 let waveCountdownStart = 0; // The frame the current countdown began
 
 // Display variables
 let health = 100;         // Amount of starting health
 let money = 500;         // Amount of starting cash
-let killReward = 25;    // Money earned per monster killed
+let killReward = 35;    // Money earned per monster killed
 let highScore_mk = 0;  // Highscore for monsters killed
 let highScore_wn = 0; // Highscore for highest wave completed
 let waveNumber = 1;  // Which wave we are on
@@ -20,27 +20,32 @@ let waveNumber = 1;  // Which wave we are on
 // Monster
 let monstersKilled = 0;            // Monsters killed
 let monstersinwave = 0;           // Monsters in the current wave
-let monstersspawned = 0;         // Monsters spawned in the current wave
-let monsterspawninterval = 60;  // Spawn a monster every 60 frames (1 second at 60fps)
-let lastMonsterSpawnTime = 0;  // Last time a monster was spawned (in frames)
-let waveActive = false;       // Whether a wave is currently active
-let monsters = [];           // Array to hold all active monsters
+let bossinwave = 0;              // Boss in current wave
+let bossspawned = false;         // Whether the current wave's boss has spawned
+let monstersspawned = 0;        // Monsters spawned in the current wave
+let monsterspawninterval = 60; // Spawn a monster every 60 frames (1 second at 60fps)
+let lastMonsterSpawnTime = 0; // Last time a monster was spawned (in frames)
+let waveActive = false;      // Whether a wave is currently active
+let monsters = [];          // Array to hold all active monsters
 
 // Monster stats
-let monsterdamage1 = 5;      // The damage of monster 1
+let monsterdamage1 = 10;     // The damage of monster 1
 let monsterspeed1 = 2;      // The speed of monster 1
 let monsterhealth1 = 100;  // The health of monster 1
+let bosshealth = 1000     // Health of boss
+let bossspeed = 1.5;       // Speed of boss
+
 
 // Towers
 let towers = [];                        // List of placed towers
 let selectedTowerIndex = -1;           // Track which tower is selected
 let towerRadius = 3;                  // Tower radius in tiles
-let towerdps = 50;                   // Damage per shot (one shot per second)
+let towerdps = monsterhealth1/3;     // Damage per shot (one shot per second)
 let towerCooldown = 60;             // Frames between shots
 let shotDuration = 8;              // How many frames a shot line stays visible
 let numberoftowers = 0;           // Number of towers placed
 let towerBaseCost = 200;         // Price of the first tower
-let towerCostIncrease = 75;     // How much each extra tower adds to the price
+let towerCostIncrease = 20;     // How much each extra tower adds to the price
 
 let grid = {
     numElems: numGridElems,
@@ -84,6 +89,14 @@ function createMonster() {
     };
 }
 
+function createBoss() {
+    let boss = createMonster();
+    boss.speed = bossspeed;
+    boss.health = bosshealth;
+    boss.isBoss = true;
+    return boss;
+}
+
 function moveMonster(monster) {
     if (monster.pathIndex >= path.length - 1) {
         health -= monster.damage;
@@ -111,27 +124,35 @@ function moveMonster(monster) {
 }
 
 function drawMonster(monster) {
-    fill(50, 191, 165);
-    ellipse(monster.x, monster.y, grid.sizeElems * 0.6, grid.sizeElems * 0.6);
+    fill(monster.isBoss ? "red" : color(50, 191, 165));
+    let size = monster.isBoss ? 0.9 : 0.6;
+    ellipse(monster.x, monster.y, grid.sizeElems * size, grid.sizeElems * size);
 }
 
 function startwave() {
     waveActive = true;
     monstersspawned = 0;
-    monstersinwave = 10;
+    monstersinwave = 25;
+    bossinwave = waveNumber === 3 ? 1 : 0;
+    bossspawned = false;
 }
 
 function updateWave() {
     if (waveActive === false) {
         return; // No wave is currently active
     }
-    if (monstersspawned >= monstersinwave) {
+    if (monstersspawned >= monstersinwave && (!bossinwave || bossspawned)) {
         waveActive = false; // All monsters in the wave have been spawned
         return;
     }
     if (framecount - lastMonsterSpawnTime >= monsterspawninterval) {
-        monsters.push(createMonster());
-        monstersspawned++;
+        if (monstersspawned < monstersinwave) {
+            monsters.push(createMonster());
+            monstersspawned++;
+        } else if (bossinwave && !bossspawned) {
+            monsters.push(createBoss());
+            bossspawned = true;
+        }
         lastMonsterSpawnTime = framecount;
     }
 }
@@ -350,7 +371,7 @@ function draw() {
     }
 
     // Game over
-    if (health <= 0) {
+    if (health <= 0 || waveNumber === 4) {
         highScore_mk = max(highScore_mk, monstersKilled);
         highScore_wn = max(highScore_wn, waveNumber - 1); // Waves actually completed
         background(0);
@@ -364,7 +385,7 @@ function draw() {
 }
 
 function mousePressed() {
-    if (health <= 0) {
+    if (health <= 0 || waveNumber === 4) {
         health = 100;                     // Reset health
         money = 500;                     // Reset money
         monsters = [];                  // Reset the monsters array
@@ -374,6 +395,8 @@ function mousePressed() {
         towers = [];                 // Reset placed towers
         selectedTowerIndex = -1;    // Reset selected tower
         waveActive = false;        // Reset wave state
+        bossinwave = 0;            // Reset boss state
+        bossspawned = false;
         monstersspawned = 0;      // Reset spawn counter
         waitingForWave = true;   // Delay applies again before the first wave
         waveCountdownStart = framecount; // Restart the countdown from now
